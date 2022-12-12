@@ -101,7 +101,7 @@ def main():
         l2_weight = trial.suggest_float(name='l2 weight', low=1e-4, high=1e0)
         dist_weight = trial.suggest_float(name='dist. weight', low=1e-5, high=1e-3)
         # replace the penalties in the task
-        new_penalties = [(penalty, weight) for (penalty, old_weight), weight in zip(task.penalties, [dp_weight, l2_weight, dist_weight])]
+        new_penalties = [(penalty, weight) for (penalty, old_weight), weight in zip(task.penalties, [l2_weight, dist_weight, dp_weight])]
         task.penalties = new_penalties
         # learn the parameters using SGD
         learned_logits = task.train(n_iters, init_seed=args.seed, silent=silent)
