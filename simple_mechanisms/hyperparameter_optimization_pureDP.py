@@ -1,10 +1,15 @@
+import logging
+import sys
+
 import optuna, jax, argparse
 
 import numpy as np
 import jax.numpy as jnp
 
 from functools import partial
-from infer import pure_dp_penalty, l2_penalty, distance_penalty, learn_with_sgd
+from infer import adp_penalty, pure_dp_penalty, l2_penalty, distance_penalty, learn_with_sgd
+
+logger = logging.getLogger(__name__)
 
 ## Set up the data
 
@@ -29,35 +34,67 @@ distance_matrix = categories @ distances
 ## optimize hyperparams
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--epsilon", type=float, default=1.0)
-    #parser.add_argument("--delta", type=float, default=1e-6)
-    parser.add_argument("--num_iters", type=int, default=int(1e6))
-    parser.add_argument("--num_trials", type=int, default=10)
+    parser.add_argument("--delta", type=float, default=1e-5)
+    parser.add_argument("--num_iters", type=int, default=int(1e5))
+    parser.add_argument("--num_trials", type=int, default=2)
     parser.add_argument("--output_path", type=str, default="./")
+    parser.add_argument("--debug", default=False, action='store_true')
     args = parser.parse_args()
 
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+        logger.debug('Using debugging output')
+        silent = False
+    else:
+        logger.setLevel(logging.INFO)
+        silent = True
+
     epsilon = args.epsilon
+    delta_target = args.delta
+
+    assert epsilon > 0 and 0 <= delta_target <= 1, f'Invalid privacy params: eps={epsilon}, delta={delta_target}!'
+
+    if delta_target == 0:
+        logger.info(f'Running hyperparam optimisation using pure DP with eps={epsilon}')
+    else:
+        logger.info(f'Running hyperparam optimisation using ADP with eps={epsilon}, delta={delta_target}')
 
     # create a prototype penalties to initialize the task
     penalties = [
-            (partial(pure_dp_penalty, eps=epsilon, n_seats=n_seats), 10.), 
             (l2_penalty, 0.001), 
             (partial(distance_penalty, distances=distance_matrix, n_seats=n_seats), 0.001)
             ]
+    if delta_target == 0:
+        penalties.append((partial(pure_dp_penalty, eps=epsilon, n_seats=n_seats), 10.))
+    else:
+        penalties.append((partial(adp_penalty, eps=epsilon, delta_target=delta_target, n_seats=n_seats), 10.))
 
     task = learn_with_sgd(n_seats, n_cats, categories, penalties)
     n_iters = args.num_iters
 
-    def evaluate_results(logits):
+    def evaluate_results(logits, epsilon_target):
         log_probs = jax.nn.log_softmax(logits.reshape(n_seats+1,-1), axis=1)
         # log-prob of reporting the correct category
         log_p_correct_category = log_probs[np.where(categories)]
-        # DP guarantee
-        row_wise_epsilon = jnp.abs(log_probs[1:] - log_probs[:-1]).max(1)
+        probs = jnp.exp(log_probs)
 
-        return log_probs, log_p_correct_category, row_wise_epsilon
+        # DP guarantees
+        # row-wise epsilons
+        #row_wise_epsilon = jnp.abs(log_probs[1:] - log_probs[:-1]).max(1)
+
+        # total DP epsilon
+        epsilon_total = jnp.max(jax.nn.relu( jnp.abs(log_probs[1:] - log_probs[:-1]) - epsilon_target) )
+
+        # calculate total delta for ADP
+        delta_add = jnp.max(jnp.sum(jnp.clip(probs[:-1,:] - jnp.exp(epsilon_target)*probs[1:,:], a_min=0, a_max=None),1))
+        delta_remove = jnp.max(jnp.sum(jnp.clip(probs[1:,:] - jnp.exp(epsilon_target)*probs[:-1,:], a_min=0, a_max=None),1))
+        delta_total = jnp.max( jnp.array((delta_add,delta_remove)))
+
+        return log_probs, log_p_correct_category, epsilon_total, delta_total
 
     def objective(trial):
         dp_weight = trial.suggest_float(name='dp weight', low=1e-3, high=1e1)
@@ -67,15 +104,17 @@ def main():
         new_penalties = [(penalty, weight) for (penalty, old_weight), weight in zip(task.penalties, [dp_weight, l2_weight, dist_weight])]
         task.penalties = new_penalties
         # learn the parameters using SGD
-        learned_logits = task.train(n_iters, init_seed=args.seed, silent=True)
+        learned_logits = task.train(n_iters, init_seed=args.seed, silent=silent)
         #
-        log_probs, logp_correct, epsilons = evaluate_results(learned_logits)
+        log_probs, logp_correct, epsilon_totals, delta_totals = evaluate_results(learned_logits, epsilon)
         #
         logp_loss = np.linalg.norm(logp_correct)
-        eps_loss = np.linalg.norm(epsilons-epsilon)
+
+        dp_params_loss = np.linalg.norm(epsilon_totals-epsilon) + np.linalg.norm(delta_totals - delta_target)
+
         furthest_cat_logp = log_probs[np.arange(n_seats+1), np.argmax(categories @ distances, axis=1)]
         dist_loss = np.sum(np.exp(furthest_cat_logp) > 1e-3)
-        return logp_loss, eps_loss, dist_loss, np.linalg.norm(np.exp(furthest_cat_logp))
+        return logp_loss, dp_params_loss, dist_loss, np.linalg.norm(np.exp(furthest_cat_logp))
 
     study = optuna.create_study(directions=["minimize", "minimize", "minimize", "minimize"])
     study.optimize(objective, n_trials=args.num_trials)

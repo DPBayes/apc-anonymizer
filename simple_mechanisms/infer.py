@@ -1,3 +1,5 @@
+import logging
+
 import jax, tqdm
 import jax.numpy as jnp
 import numpy as np
@@ -26,8 +28,16 @@ def pure_dp_penalty(qs, eps, n_seats):
     logits = qs.reshape(n_seats+1, -1)
     log_probs = jax.nn.log_softmax(logits, axis=1)
     ll_ratio = jnp.abs(log_probs[:-1] - log_probs[1:])
-    return jax.nn.relu(ll_ratio - (eps-1e-5)).sum()
+    return jax.nn.relu(ll_ratio - (eps-1e-5)).max()
+    #return jax.nn.relu(ll_ratio - (eps-1e-5)).sum()
 
+def adp_penalty(qs, eps, delta_target, n_seats):
+    logits = qs.reshape(n_seats+1, -1)
+    probs = jnp.exp(jax.nn.log_softmax(logits, axis=1))
+    delta_add = jnp.max(jnp.sum(jnp.clip(probs[:-1,:] - jnp.exp(eps)*probs[1:,:], a_min=0, a_max=None),1))
+    delta_remove = jnp.max(jnp.sum(jnp.clip(probs[1:,:] - jnp.exp(eps)*probs[:-1,:], a_min=0, a_max=None),1))
+    delta_total = jnp.max( jnp.array((delta_add,delta_remove)))
+    return jax.nn.relu(delta_total - delta_target)
 
 class learn_with_sgd:
     def __init__(self, n_seats: int, n_cats: int, categories: np.ndarray, penalties: list[tuple]):
@@ -97,10 +107,7 @@ class learn_with_sgd:
         else: 
             epoch_len = 1
 
-        if not silent:
-            iterator = tqdm.tqdm(range(num_iters // epoch_len))
-        else:
-            iterator = range(num_iters // epoch_len)
+        iterator = tqdm.tqdm(range(num_iters // epoch_len), disable=silent)
 
         for epoch_nr in iterator:
             optim_state_new, loss_at_iter = fori_loop(0, epoch_len, update_epoch, (optim_state, 0.0))
