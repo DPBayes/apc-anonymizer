@@ -1,15 +1,25 @@
 import logging
+import pickle
 import sys
 
-import optuna, jax, argparse
+from functools import partial
 
 import numpy as np
 import jax.numpy as jnp
 
-from functools import partial
+import optuna, jax, argparse
+from optuna.storages import RDBStorage
+
+import sqlalchemy
+from sqlalchemy.engine import URL
+
 from infer import adp_penalty, pure_dp_penalty, l2_penalty, distance_penalty, learn_with_sgd
 
 logger = logging.getLogger(__name__)
+
+# Add stream handler of stdout to show the messages
+# NOTE: haven't tested this
+optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
 
 ## Set up the data
 
@@ -42,7 +52,9 @@ def main():
     parser.add_argument("--num_iters", type=int, default=int(1e5))
     parser.add_argument("--num_trials", type=int, default=2)
     parser.add_argument("--output_path", type=str, default="./")
-    parser.add_argument("--debug", default=False, action='store_true')
+    parser.add_argument("--study_name", type=str, default="hyperparam-opt-test1", help='Used for identifying Optuna studies and as a corresponding filename')
+    parser.add_argument("--save_results", default=False, action='store_true', help='Save Optuna results to database')
+    parser.add_argument("--debug", default=False, action='store_true', help='Use debugging prints')
     args = parser.parse_args()
 
     if args.debug:
@@ -116,8 +128,28 @@ def main():
         dist_loss = np.sum(np.exp(furthest_cat_logp) > 1e-3)
         return logp_loss, dp_params_loss, dist_loss, np.linalg.norm(np.exp(furthest_cat_logp))
 
-    study = optuna.create_study(directions=["minimize", "minimize", "minimize", "minimize"])
+    
+    if args.save_results:
+        # save results using postgresql database
+        # SET THESE to point to some actual database
+        db_url = URL.create(
+                "postgresql",
+                #username="mynonsuperuser",
+                #password="mynonsuperuser",  # plain (unescaped) text
+                host="localhost",
+                database="myinner_db",)
+
+        storage = RDBStorage(url=str(db_url))
+    else:
+        # or run test version without saving results
+        db_url = None
+        storage = None
+
+    study = optuna.create_study(study_name=args.study_name, directions=["minimize", "minimize", "minimize", "minimize"],
+                                storage=storage, load_if_exists=True)
     study.optimize(objective, n_trials=args.num_trials)
+
+
 
 if __name__ == "__main__":
     main()
