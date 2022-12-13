@@ -1,0 +1,43 @@
+### These are step by step instructions for setting up a local database using postgresql for testing hyperparam optim
+
+##############################################
+After installation (should work with conda):
+##############################################
+
+## create local database
+
+initdb -D mylocal_db
+
+## start server
+
+pg_ctl -D mylocal_db -l logfile start
+
+
+## check if server is running
+
+ps aux | grep postgres
+
+
+##############################################
+When server is running:
+##############################################
+
+## create a non-superuser:
+
+createuser myuser
+
+
+## or with password:
+
+createuser --encrypted --pwprompt myuser
+
+
+## create inner database inside the base database owned by the new user; this will be used for writing the results
+
+createdb --owner=myuser myinner_db
+
+## stop server
+
+pg_ctl stop -D mylocal_db
+
+
