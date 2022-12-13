@@ -76,16 +76,21 @@ def main():
         logger.info(f'Running hyperparam optimisation using ADP with eps={epsilon}, delta={delta_target}')
 
     # create a prototype penalties to initialize the task
-    penalties = [
-            (l2_penalty, 0.001), 
-            (partial(distance_penalty, distances=distance_matrix, n_seats=n_seats), 0.001)
-            ]
+    distance_penalty_fn = partial(distance_penalty, distances=distance_matrix, n_seats=n_seats)
     if delta_target == 0:
-        penalties.append((partial(pure_dp_penalty, eps=epsilon, n_seats=n_seats), 10.))
+        dp_penalty_fn = partial(pure_dp_penalty, eps=epsilon, n_seats=n_seats)
     else:
-        penalties.append((partial(adp_penalty, eps=epsilon, delta_target=delta_target, n_seats=n_seats), 10.))
+        dp_penalty_fn = partial(adp_penalty, eps=epsilon, delta_target=delta_target, n_seats=n_seats)
 
-    task = learn_with_sgd(n_seats, n_cats, categories, penalties)
+    def create_penalty_fn(l2_weight, dist_weight, dp_weight):
+        def penalty_fn(qs):
+            return l2_weight * l2_penalty(qs) + dist_weight * distance_penalty_fn(qs) + dp_weight * dp_penalty_fn(qs)
+        return penalty_fn
+
+
+    # create a prototype penalties to initialize the task
+    total_penalty = create_penalty_fn(l2_weight=0.001, dist_weight=0.001, dp_weight=10.)
+    task = learn_with_sgd(n_seats, n_cats, categories, total_penalty)
     n_iters = args.num_iters
 
     def evaluate_results(logits, epsilon_target):
@@ -93,10 +98,6 @@ def main():
         # log-prob of reporting the correct category
         log_p_correct_category = log_probs[np.where(categories)]
         probs = jnp.exp(log_probs)
-
-        # DP guarantees
-        # row-wise epsilons
-        #row_wise_epsilon = jnp.abs(log_probs[1:] - log_probs[:-1]).max(1)
 
         # total DP epsilon
         epsilon_total = jnp.max(jax.nn.relu( jnp.abs(log_probs[1:] - log_probs[:-1]) - epsilon_target) )
@@ -113,8 +114,8 @@ def main():
         l2_weight = trial.suggest_float(name='l2 weight', low=1e-4, high=1e0)
         dist_weight = trial.suggest_float(name='dist. weight', low=1e-5, high=1e-3)
         # replace the penalties in the task
-        new_penalties = [(penalty, weight) for (penalty, old_weight), weight in zip(task.penalties, [l2_weight, dist_weight, dp_weight])]
-        task.penalties = new_penalties
+        new_total_penalty = create_penalty_fn(l2_weight=l2_weight, dist_weight=dist_weight, dp_weight=dp_weight)
+        task.penalty_fn = new_total_penalty
         # learn the parameters using SGD
         learned_logits = task.train(n_iters, init_seed=args.seed, silent=silent)
         #
