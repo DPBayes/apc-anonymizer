@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--num_iters", type=int, default=int(1e5))
     parser.add_argument("--num_trials", type=int, default=2)
     parser.add_argument("--output_path", type=str, default="./")
-    parser.add_argument("--study_name", type=str, default="hyperparam-opt-test1", help='Used for identifying Optuna')
+    parser.add_argument("--study_name", type=str, default="hyperparam-opt-test1", help='Used for identifying Optuna test runs')
     parser.add_argument("--save_results", default=False, action='store_true', help='Save Optuna results to database')
     parser.add_argument("--debug", default=False, action='store_true', help='Use debugging prints')
     args = parser.parse_args()
