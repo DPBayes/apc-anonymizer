@@ -16,6 +16,8 @@ from functools import partial
 
 from jaxlib.xla_extension import DeviceArray
 
+from collections.abc import Callable
+
 def distance_penalty(qs, distances, n_seats):
     logits = qs.reshape(n_seats+1, -1)
     log_probs = jax.nn.log_softmax(logits, axis=1)
@@ -40,7 +42,7 @@ def adp_penalty(qs, eps, delta_target, n_seats):
     return jax.nn.relu(delta_total - delta_target)
 
 class learn_with_sgd:
-    def __init__(self, n_seats: int, n_cats: int, categories: np.ndarray, penalties: list[tuple]):
+    def __init__(self, n_seats: int, n_cats: int, categories: np.ndarray, total_penalty: Callable):
         """
         n_seats: total number of seats in a bus
         n_cats: number of categories to release the status from
@@ -50,7 +52,7 @@ class learn_with_sgd:
         self.n_seats = n_seats
         self.n_cats = n_cats
         self.categories = categories
-        self.penalties = penalties
+        self.penalty_fn = total_penalty
 
     def loss(self, qs: DeviceArray) -> float:
         """
@@ -65,9 +67,7 @@ class learn_with_sgd:
 
         combined_loss = -1 * bce
         ## Add penalty terms to the combined loss
-
-        for penalty, weight in self.penalties:
-            combined_loss += weight * penalty(qs)
+        combined_loss += self.penalty_fn(qs)
 
         return combined_loss
 
