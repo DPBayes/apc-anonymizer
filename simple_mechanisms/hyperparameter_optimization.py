@@ -60,22 +60,22 @@ def main():
         logger.setLevel(logging.INFO)
         silent = True
 
-    epsilon = args.epsilon
+    epsilon_target = args.epsilon
     delta_target = args.delta
 
-    assert epsilon > 0 and 0 <= delta_target <= 1, f'Invalid privacy params: eps={epsilon}, delta={delta_target}!'
+    assert epsilon_target > 0 and 0 <= delta_target <= 1, f'Invalid privacy params: eps={epsilon_target}, delta={delta_target}!'
 
     if delta_target == 0:
-        logger.info(f'Running hyperparam optimisation using pure DP with eps={epsilon}')
+        logger.info(f'Running hyperparam optimisation using pure DP with eps={epsilon_target}')
     else:
-        logger.info(f'Running hyperparam optimisation using ADP with eps={epsilon}, delta={delta_target}')
+        logger.info(f'Running hyperparam optimisation using ADP with eps={epsilon_target}, delta={delta_target}')
 
     # create a prototype penalties to initialize the task
     distance_penalty_fn = partial(distance_penalty, distances=distance_matrix, n_seats=n_seats)
     if delta_target == 0:
-        dp_penalty_fn = partial(pure_dp_penalty, eps=epsilon, n_seats=n_seats)
+        dp_penalty_fn = partial(pure_dp_penalty, eps=epsilon_target, n_seats=n_seats)
     else:
-        dp_penalty_fn = partial(adp_penalty, eps=epsilon, delta_target=delta_target, n_seats=n_seats)
+        dp_penalty_fn = partial(adp_penalty, eps=epsilon_target, delta_target=delta_target, n_seats=n_seats)
 
     def create_penalty_fn(l2_weight, dist_weight, dp_weight):
         def penalty_fn(qs):
@@ -94,7 +94,7 @@ def main():
         log_p_correct_category = log_probs[np.where(categories)]
         probs = jnp.exp(log_probs)
 
-        # total DP epsilon
+        # total DP epsilon_target
         epsilon_total = jnp.max(jax.nn.relu( jnp.abs(log_probs[1:] - log_probs[:-1]) - epsilon_target) )
 
         # calculate total delta for ADP
@@ -114,11 +114,11 @@ def main():
         # learn the parameters using SGD
         learned_logits = task.train(n_iters, init_seed=args.seed, silent=silent)
         #
-        log_probs, logp_correct, epsilon_totals, delta_totals = evaluate_results(learned_logits, epsilon)
+        log_probs, logp_correct, epsilon_totals, delta_totals = evaluate_results(learned_logits, epsilon_target)
         #
         logp_loss = np.linalg.norm(logp_correct)
 
-        dp_params_loss = np.linalg.norm(epsilon_totals-epsilon) + np.linalg.norm(delta_totals - delta_target)
+        dp_params_loss = np.linalg.norm(epsilon_totals-epsilon_target) + np.linalg.norm(delta_totals - delta_target)
 
         furthest_cat_logp = log_probs[np.arange(n_seats+1), np.argmax(categories @ distances, axis=1)]
         dist_loss = np.sum(np.exp(furthest_cat_logp) > 1e-3)
@@ -133,7 +133,7 @@ def main():
                 #username="mynonsuperuser",
                 #password="mynonsuperuser",  # plain (unescaped) text
                 host="localhost",
-                database="myinner_db",)
+                database=f"myinner_db_eps{epsilon_target}_delta{delta_target}",)
 
         storage = RDBStorage(url=str(db_url))
     else:
