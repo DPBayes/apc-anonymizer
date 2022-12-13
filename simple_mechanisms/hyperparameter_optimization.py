@@ -1,4 +1,4 @@
-import logging
+import logging, logging.config
 import pickle
 import sys
 
@@ -15,36 +15,24 @@ from sqlalchemy.engine import URL
 
 from infer import adp_penalty, pure_dp_penalty, l2_penalty, distance_penalty, learn_with_sgd
 
-logger = logging.getLogger(__name__)
-
-# Add stream handler of stdout to show the messages
-# NOTE: haven't tested this
-optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-
 ## Set up the data
-
 # following the waltti git
 n_seats = 78
 n_cats = 6
 cat_edges = [5, 40, 50, 65, 72, 78]
-#print(cat_edges)
 categories = np.empty((n_seats+1, n_cats))
 j = 0
 for i in range(n_seats+1):
     if i > cat_edges[j]:
         j += 1
     categories[i] = np.eye(n_cats)[j]
-#print(np.sum(categories, axis=0))
 
 # compute distances between the categories across seats
 distances = np.abs(np.arange(0,n_cats).reshape(-1, 1) - np.arange(0,n_cats).reshape(1, -1))
 distance_matrix = categories @ distances
 
 
-## optimize hyperparams
-
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--epsilon", type=float, default=1.0)
@@ -56,6 +44,13 @@ def main():
     parser.add_argument("--save_results", default=False, action='store_true', help='Save Optuna results to database')
     parser.add_argument("--debug", default=False, action='store_true', help='Use debugging prints')
     args = parser.parse_args()
+
+    logging.basicConfig(filename=f'{args.study_name}.log', encoding='utf-8', level=logging.WARNING)
+    logger = logging.getLogger("joint_logger")
+
+    optuna.logging.enable_propagation()  # Propagate logs to the root logger.
+    optuna.logging.disable_default_handler()  # Stop showing logs in sys.stderr.
+
 
     if args.debug:
         logger.setLevel(logging.DEBUG)

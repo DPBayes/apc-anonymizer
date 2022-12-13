@@ -18,6 +18,10 @@ from jaxlib.xla_extension import DeviceArray
 
 from collections.abc import Callable
 
+from tqdm.contrib.logging import logging_redirect_tqdm
+
+logger = logging.getLogger("joint_logger")
+
 def distance_penalty(qs, distances, n_seats):
     logits = qs.reshape(n_seats+1, -1)
     log_probs = jax.nn.log_softmax(logits, axis=1)
@@ -53,7 +57,7 @@ class learn_with_sgd:
         self.n_cats = n_cats
         self.categories = categories
         self.penalty_fn = total_penalty
-
+        
     def loss(self, qs: DeviceArray) -> float:
         """
         qs: probability table logits in long form (flattened)
@@ -109,15 +113,15 @@ class learn_with_sgd:
 
         iterator = tqdm.tqdm(range(num_iters // epoch_len), disable=silent)
 
-        for epoch_nr in iterator:
-            optim_state_new, loss_at_iter = fori_loop(0, epoch_len, update_epoch, (optim_state, 0.0))
-            if not silent:
+        with logging_redirect_tqdm():
+            for epoch_nr in iterator:
+                optim_state_new, loss_at_iter = fori_loop(0, epoch_len, update_epoch, (optim_state, 0.0))
                 iterator.set_description(f"Loss {loss_at_iter.item():.2f}")
                 if jnp.isnan(loss_at_iter):
-                    print("Nans!!!!!")
+                    logger.info("Nans!!!!!")
                     break
-            optim_state = optim_state_new
-        if silent:
-            print(f"Loss achieved with SGD: {loss_at_iter}")
+                optim_state = optim_state_new
+            if silent:
+                logger.info(f"Loss achieved with SGD: {loss_at_iter}")
         logits = optimizer.get_params(optim_state)
         return logits
