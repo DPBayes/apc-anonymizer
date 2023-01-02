@@ -22,6 +22,25 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 logger = logging.getLogger("joint_logger")
 
+def force_dp(qs, n_seats, epsilon_target, tau=1e-3, max_iter=1000):
+    logits = qs.reshape(n_seats+1, -1)
+    new_logits = np.zeros(logits.shape)
+    logit_last = logits[0]
+    new_logits[0] = logit_last
+    for c in range(1, n_seats+1):
+        new_logits[c] = logits[c]
+        ll_ratio = jax.nn.log_softmax(new_logits[c]) - jax.nn.log_softmax(logit_last)
+        iter_nr = 0
+        while jnp.abs(ll_ratio).max()>epsilon_target:
+            if iter_nr >= max_iter:
+                break
+            new_logits[c] = jnp.where(ll_ratio < -epsilon_target, new_logits[c]+tau, new_logits[c])
+            new_logits[c] = jnp.where(ll_ratio > epsilon_target, new_logits[c]-tau, new_logits[c])
+            ll_ratio = jax.nn.log_softmax(new_logits[c]) - jax.nn.log_softmax(logit_last)
+            iter_nr += 1
+        logit_last = new_logits[c]
+    return new_logits.flatten()
+
 def distance_penalty(qs, distances, n_seats):
     logits = qs.reshape(n_seats+1, -1)
     log_probs = jax.nn.log_softmax(logits, axis=1)
