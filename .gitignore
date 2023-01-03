@@ -164,3 +164,6 @@ cython_debug/
 
 # pickles
 *.p
+
+# Mac stuff
+.DS_Store
