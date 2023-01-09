@@ -64,7 +64,7 @@ def inference(args, unknown_args):
     n_iters = args.num_iters
 
     def objective(trial):
-        dp_weight = trial.suggest_float(name='dp weight', low=1e2, high=1e3)
+        dp_weight = trial.suggest_float(name='dp weight', low=1e2, high=1e4)
         dist_weight = trial.suggest_float(name='dist. weight', low=1e-6, high=1e-2)
 
         # replace the penalties in the task
@@ -143,7 +143,7 @@ def sampling(args, unknown_args):
     delta_target = args.delta
 
     ## read prob table
-    prob_df = pd.read_csv(args.output_path + f"{args.config_name}_prob_table_eps{epsilon_target}_delta_{delta_target}.csv")
+    prob_df = pd.read_csv(args.output_path + f"{args.config_name}_prob_table_eps{epsilon_target}_delta_{delta_target}.csv", index_col=0)
     
     ## sample according to row corresponding to args.state
     probs = prob_df.loc[args.state].values
