@@ -20,7 +20,7 @@ np.set_printoptions(suppress=True)
 
 ################################################################################
 
-def inference(args):
+def inference(args, unknown_args):
     ## load the configuration
     if not args.config_module_path[-3:] == ".py":
         raise ConfigParsingException("The config path must be a python module (i.e. end in '.py')")
@@ -102,7 +102,7 @@ def inference(args):
                                 storage=storage, load_if_exists=True)
 
     if args.train_hyperparameters:
-        study.optimize(objective, n_trials=20)
+        study.optimize(objective, n_trials=args.num_trials)
 
     else:
         optimal_hyperparameters = study.best_params
@@ -132,47 +132,57 @@ def inference(args):
         ## store the learned probability table into a csv
 
         prob_df = pd.DataFrame(final_ps, columns=categories_df.columns)
+        prob_df.to_csv(args.output_path + f"{args.config_name}_prob_table_eps{epsilon_target}_delta_{delta_target}.csv")
 
 
 ################################################################################
 
-def sampling(args):
-    print(args.epsilon)
-#    pass
+def sampling(args, unknown_args):
+
+    epsilon_target = args.epsilon
+    delta_target = args.delta
+
+    ## read prob table
+    prob_df = pd.read_csv(args.output_path + f"{args.config_name}_prob_table_eps{epsilon_target}_delta_{delta_target}.csv")
+    
+    ## sample according to row corresponding to args.state
+    probs = prob_df.loc[args.state].values
+    # normalize (shouldn't be necessary though)
+    if probs.sum != 1.:
+        probs = probs / probs.sum()
+    draw = np.random.choice(prob_df.columns, p=probs)
+    print(draw)
+    return draw
+
+
 #################################################################################
-#
-#def main():
-parser = argparse.ArgumentParser()
+def main():
+    parser = argparse.ArgumentParser()
+    # common arguments
+    parser.add_argument("config_module_path", type=str, help="Path to the vehicle configuration file")
+    parser.add_argument("config_name", type=str, help="Name of your configuration")
+    parser.add_argument("--seed", type=int, default=123)
+    parser.add_argument("--epsilon", type=float, default=1.0)
+    parser.add_argument("--delta", type=float, default=1e-5)
+    parser.add_argument("--output_path", type=str, default="./")
 
-subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers()
 
-#
-parser_infer = subparsers.add_parser('infer')
-#parser_infer.add_argument("config_module_path", type=str, help="Path to the vehicle configuration file")
-#parser_infer.add_argument("config_name", type=str, help="Name of your configuration")
-#parser_infer.add_argument("--seed", type=int, default=123)
-#parser_infer.add_argument("--epsilon", type=float, default=1.0)
-#parser_infer.add_argument("--delta", type=float, default=1e-5)
-parser_infer.add_argument("--num_iters", type=int, default=int(1e7))
-parser_infer.add_argument("--output_path", type=str, default="./")
-parser_infer.add_argument("--train_hyperparameters", action='store_true')
-parser_infer.add_argument("--num_trials", type=int, default=50)
-parser_infer.set_defaults(func=inference)
+    # inference mode arguments
+    parser_infer = subparsers.add_parser('infer')
+    parser_infer.add_argument("--num_iters", type=int, default=int(1e7))
+    parser_infer.add_argument("--train_hyperparameters", action='store_true')
+    parser_infer.add_argument("--num_trials", type=int, default=50)
+    parser_infer.set_defaults(func=inference)
 
-#
-parser_sample = subparsers.add_parser('sample')
-parser_infer.add_argument("--input_path", type=str, default="./")
-parser_sample.set_defaults(func=sampling)
+    # sampling mode arguments
+    parser_sample = subparsers.add_parser('sample')
+    parser_sample.add_argument("state", type=int)
+    parser_sample.set_defaults(func=sampling)
 
+    args, unknown_args = parser.parse_known_args()
 
-parser.add_argument("config_module_path", type=str, help="Path to the vehicle configuration file")
-parser.add_argument("config_name", type=str, help="Name of your configuration")
-parser.add_argument("--seed", type=int, default=123)
-parser.add_argument("--epsilon", type=float, default=1.0)
-parser.add_argument("--delta", type=float, default=1e-5)
-#parser.add_argument("--num_iters", type=int, default=int(1e7))
-#parser.add_argument("--output_path", type=str, default="./")
-#parser.add_argument("--train_hyperparameters", action='store_true')
-args, unknown_args = parser.parse_known_args()
+    args.func(args, unknown_args)
 
-args.func(args)
+if __name__ == "__main__":
+    main()
