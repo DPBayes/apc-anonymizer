@@ -5,12 +5,11 @@ import jax.numpy as jnp
 import numpy as np
 
 from jax import grad, jacobian, hessian, value_and_grad
-from jax.nn import softmax, log_softmax
 from jax.lax import fori_loop
 
 from scipy.optimize import minimize
 
-from numpyro.optim import Adam
+from numpyro.optim import Adam, SGD
 
 from functools import partial
 
@@ -22,75 +21,83 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 logger = logging.getLogger("joint_logger")
 
-def force_dp(qs, n_seats, epsilon_target, tau=1e-3, max_iter=1000):
-    logits = qs.reshape(n_seats+1, -1)
+def centered_softmax(logits, pad_with=0.0):
+    padded_logits = jnp.pad(logits, ((0,0), (0,1)), constant_values=pad_with)
+    return jax.nn.softmax(padded_logits, axis=1)
+
+def centered_log_softmax(logits, pad_with=0.0):
+    padded_logits = jnp.pad(logits, ((0,0), (0,1)), constant_values=pad_with)
+    return jax.nn.log_softmax(padded_logits, axis=1)
+
+use_centered_softmax = False
+
+if use_centered_softmax:
+    def softmax(x, axis=1): return centered_softmax(x)
+    def log_softmax(x, axis=1): return centered_log_softmax(x)
+
+else:
+    from jax.nn import softmax, log_softmax
+
+
+def force_dp(logits, epsilon_target, tau=1e-3, max_iter=1000):
     new_logits = np.zeros(logits.shape)
     logit_last = logits[0]
     new_logits[0] = logit_last
-    for c in range(1, n_seats+1):
+    for c in range(1, len(categories)):
         new_logits[c] = logits[c]
-        ll_ratio = jax.nn.log_softmax(new_logits[c]) - jax.nn.log_softmax(logit_last)
+        ll_ratio = log_softmax(new_logits[c]) - log_softmax(logit_last)
         iter_nr = 0
         while jnp.abs(ll_ratio).max()>epsilon_target:
             if iter_nr >= max_iter:
                 break
             new_logits[c] = jnp.where(ll_ratio < -epsilon_target, new_logits[c]+tau, new_logits[c])
             new_logits[c] = jnp.where(ll_ratio > epsilon_target, new_logits[c]-tau, new_logits[c])
-            ll_ratio = jax.nn.log_softmax(new_logits[c]) - jax.nn.log_softmax(logit_last)
+            ll_ratio = log_softmax(new_logits[c]) - log_softmax(logit_last)
             iter_nr += 1
         logit_last = new_logits[c]
     return new_logits.flatten()
 
-def distance_penalty(qs, distances, n_seats):
-    logits = qs.reshape(n_seats+1, -1)
-    log_probs = jax.nn.log_softmax(logits, axis=1)
+def distance_penalty(logits, distances):
+    log_probs = log_softmax(logits, axis=1)
     return jnp.sum(log_probs * distances)
 
-def l2_penalty(qs):
-    return jnp.linalg.norm(qs)
+def l2_penalty(logits):
+    return jnp.linalg.norm(logits)
 
-def pure_dp_penalty(qs, eps, n_seats):
-    logits = qs.reshape(n_seats+1, -1)
-    log_probs = jax.nn.log_softmax(logits, axis=1)
+def pure_dp_penalty(logits, eps):
+    log_probs = log_softmax(logits, axis=1)
     ll_ratio = jnp.abs(log_probs[:-1] - log_probs[1:])
     return jax.nn.relu(ll_ratio - (eps-1e-5)).max()
-    #return jax.nn.relu(ll_ratio - (eps-1e-5)).sum()
 
-def adp_penalty(qs, eps, delta_target, n_seats):
-    logits = qs.reshape(n_seats+1, -1)
-    probs = jnp.exp(jax.nn.log_softmax(logits, axis=1))
+def adp_penalty(logits, eps, delta_target):
+    probs = jnp.exp(log_softmax(logits, axis=1))
     delta_add = jnp.max(jnp.sum(jnp.clip(probs[:-1,:] - jnp.exp(eps)*probs[1:,:], a_min=0, a_max=None),1))
     delta_remove = jnp.max(jnp.sum(jnp.clip(probs[1:,:] - jnp.exp(eps)*probs[:-1,:], a_min=0, a_max=None),1))
     delta_total = jnp.max( jnp.array((delta_add,delta_remove)))
     return jax.nn.relu(delta_total - delta_target)
 
 class learn_with_sgd:
-    def __init__(self, n_seats: int, n_cats: int, categories: np.ndarray, total_penalty: Callable):
+    def __init__(self, categories: np.ndarray, total_penalty: Callable):
         """
-        n_seats: total number of seats in a bus
-        n_cats: number of categories to release the status from
         categories: a binary matrix with rows corresponding to one-hot encoded true category
         penalties: an array containing (penalty, weight) tuples
         """
-        self.n_seats = n_seats
-        self.n_cats = n_cats
         self.categories = categories
         self.penalty_fn = total_penalty
         
-    def loss(self, qs: DeviceArray) -> float:
+    def loss(self, logits: DeviceArray) -> float:
         """
-        qs: probability table logits in long form (flattened)
+        logits: probability table logits
         """
 
-        logits = qs.reshape(self.n_seats+1, -1)
-        log_probs = jax.nn.log_softmax(logits, axis=1)
+        log_probs = log_softmax(logits, axis=1)
 
         # the probability of releasing the true category 
         bce = np.sum(log_probs * self.categories)
 
         combined_loss = -1 * bce
         ## Add penalty terms to the combined loss
-        combined_loss += self.penalty_fn(qs)
+        combined_loss += self.penalty_fn(logits)
 
         return combined_loss
 
@@ -100,13 +107,19 @@ class learn_with_sgd:
         if optimizer is None:
             optimizer = Adam(1e-3)
 
-        # initialize 
-        qs0 = jax.random.normal(
+        ## initialize 
+        logits0 = jax.random.normal(
                             jax.random.PRNGKey(init_seed), 
-                            shape=(int((self.n_seats + 1) * self.n_cats),)
+                            shape=self.categories.shape
                         )
 
-        optim_state = optimizer.init(qs0)
+        if use_centered_softmax:
+            logits0 = jax.random.normal(
+                                jax.random.PRNGKey(init_seed), 
+                                shape=(self.categories.shape[0], self.categories.shape[1]-1)
+                            )
+
+        optim_state = optimizer.init(logits0)
         
         def update_epoch(i, params):
             """
@@ -115,8 +128,8 @@ class learn_with_sgd:
             params: parameters for the optimizer (optimizer's state, loss of last iteration)
             """
             optim_state, last_chunk_loss = params
-            qs = optimizer.get_params(optim_state)
-            loss_at_iter, grads = value_and_grad(partial(self.loss))(qs)
+            logits = optimizer.get_params(optim_state)
+            loss_at_iter, grads = value_and_grad(partial(self.loss))(logits)
             optim_state = optimizer.update(grads, optim_state)
             return optim_state, loss_at_iter
 
