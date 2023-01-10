@@ -120,14 +120,12 @@ def inference(args, unknown_args):
         final_ps = softmax(learned_logits)
         logps = np.log(final_ps)
         if delta_target == 0:
-            max_abs_logdiff_for_count = np.max(np.array([np.abs(logps[i] - logps[i+1]) for i in range(0, len(n_seats))]), axis=1)
-            print(max_abs_logdiff_for_count)
-            print(max_abs_logdiff_for_count.max())
-            print(np.max(max_abs_logdiff_for_count) < epsilon_target)
+            if dp_penalty_fn(learned_logits) > 0.:
+                print(f"Current configuration violates the DP requirement with epsilon {epsilon_target + dp_penalty_fn(learned_logits)}, when the target epsilon was set to {epsilon_target}")
 
         if delta_target > 0:
-            print(dp_penalty_fn(learned_logits) / delta_target)
-            print(dp_penalty_fn(learned_logits))
+            if dp_penalty_fn(learned_logits) > 0.:
+                print(f"Current configuration violates the DP requirement with delta {delta_target + dp_penalty_fn(learned_logits)}, when the target delta was set to {delta_target}")
 
         ## store the learned probability table into a csv
 
