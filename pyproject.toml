@@ -10,6 +10,9 @@ packages = [{include = "apc_anonymizer", from = "src"}]
 python = "^3.10"
 
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.257"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
