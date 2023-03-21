@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "apc-anonymizer"
+version = "0.1.0"
+description = ""
+authors = ["haphut <haphut@mistmap.com>"]
+readme = "README.md"
+packages = [{include = "apc_anonymizer", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
