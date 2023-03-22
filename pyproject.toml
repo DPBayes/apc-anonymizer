@@ -10,6 +10,7 @@ packages = [{include = "apc_anonymizer", from = "src"}]
 python = "^3.10"
 jsonschema = "^4.17.3"
 pyyaml = "^6.0"
+numpy = "^1.24.2"
 
 
 [tool.poetry.group.dev.dependencies]
