@@ -79,7 +79,7 @@ def validate_minimum_counts_unique(config):
             )
 
 
-def validate_minimum_count_zero(config):
+def validate_single_minimum_count_zero(config):
     for vm in config["vehicleModels"]:
         if 0 not in vm["minimumCounts"].values():
             raise ValueError(
@@ -150,7 +150,7 @@ def reinforce_configuration(config):
     DefaultFillingValidator(schema).validate(config)
     validate_output_filenames_unique(config)
     validate_minimum_counts_unique(config)
-    validate_minimum_count_zero(config)
+    validate_single_minimum_count_zero(config)
     validate_maximum_count_highest(config)
     config = order_minimum_counts(config)
     config = keep_unique_vehicle_models(config)
