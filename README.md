@@ -157,7 +157,7 @@ You can translate it to the language you need.
 1. Install [Poetry](https://python-poetry.org/).
 1. Run `poetry install`.
 
-Run `./check.sh` to check the code quality. FIXME: git commit, configure ruff and black and pytest folders, configure ruff line length or fix
+Run `./check.sh` to check the code quality.
 
 FIXME: fix organization
 Run `docker build --target=runtime --tag="ORGANIZATION-HERE/apc-anonymizer" .` to build the Docker image.
