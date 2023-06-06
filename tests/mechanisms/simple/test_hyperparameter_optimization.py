@@ -16,9 +16,9 @@ def test_get_category_bounds():
         "maximumCount": 126,
     }
     expected = [(0, 5), (6, 35), (36, 45), (46, 83), (84, 109), (110, 126)]
+    categories = initial.create_initial_dataframe(vehicle_model).to_numpy()
     assert (
-        hyperparameter_optimization.get_category_bounds(vehicle_model)
-        == expected
+        hyperparameter_optimization.get_category_bounds(categories) == expected
     )
 
 
