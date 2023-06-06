@@ -1,5 +1,37 @@
 import numpy as np
-from apc_anonymizer.mechanisms.simple import hyperparameter_optimization
+import pytest
+from apc_anonymizer.mechanisms.simple import (
+    hyperparameter_optimization,
+    initial,
+)
+
+
+def test_get_min_and_max_index_of_ones():
+    column = np.array([0, 0, 1, 1, 1, 0])
+    expected = np.array([2, 4])
+    try:
+        np.testing.assert_array_equal(
+            hyperparameter_optimization.get_min_and_max_index_of_ones(column),
+            expected,
+            strict=True,
+        )
+    except AssertionError as e:
+        pytest.fail(f"Getting min and max index of ones failed: {e}")
+
+
+def test_get_min_and_max_index_of_ones_single():
+    column = np.array([0, 0, 1, 0])
+    expected = np.array([2, 2])
+    try:
+        np.testing.assert_array_equal(
+            hyperparameter_optimization.get_min_and_max_index_of_ones(column),
+            expected,
+            strict=True,
+        )
+    except AssertionError as e:
+        pytest.fail(
+            f"Getting min and max index of just a single one failed: {e}"
+        )
 
 
 def test_get_category_bounds():
@@ -33,4 +65,42 @@ def test_normalize_probabilities():
         ]
     )
     normalized = hyperparameter_optimization.normalize_probabilities(probs)
-    assert np.all(np.abs(normalized.sum(axis=1) - 1.0) < 1e-10)
+    try:
+        np.testing.assert_allclose(normalized.sum(axis=1), 1.0, rtol=1e-10)
+    except AssertionError as e:
+        pytest.fail(f"Normalizing probabilities failed: {e}")
+
+
+def test_calculate_distance_matrix_simple():
+    vehicle_model = {
+        "outputFilenames": ["foo.csv", "bar.csv"],
+        "minimumCounts": {
+            "EMPTY": 0,
+            "FEW_SEATS_AVAILABLE": 3,
+            "FULL": 4,
+        },
+        "maximumCount": 9,
+    }
+    expected_distance_matrix = np.array(
+        [
+            [0, 3, 4],
+            [0, 2, 3],
+            [0, 1, 2],
+            [1, 0, 1],
+            [2, 1, 0],
+            [3, 2, 0],
+            [4, 3, 0],
+            [5, 4, 0],
+            [6, 5, 0],
+            [7, 6, 0],
+        ]
+    )
+    categories_df = initial.create_initial_dataframe(vehicle_model)
+    categories = categories_df.to_numpy()
+    distance_matrix = hyperparameter_optimization.calculate_distance_matrix(
+        categories
+    )
+    try:
+        np.testing.assert_allclose(distance_matrix, expected_distance_matrix)
+    except AssertionError as e:
+        pytest.fail(f"Calculating distance matrix for simple case failed: {e}")
