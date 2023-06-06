@@ -43,7 +43,7 @@ def calculate_distance_matrix(vehicle_model, categories):
     return distance_matrix
 
 
-def create_study(vehicle_model, db_name, skip_table_creation=False):
+def create_study(vehicle_model, db_name):
     db_url = sqlalchemy.engine.URL.create(
         drivername="postgresql+psycopg2",
         username="postgres",
@@ -103,7 +103,7 @@ def run_inference(
         "numberOfIterationsPerHyperparameterTrial"
     ]
 
-    study = create_study(vehicle_model, db_name, skip_table_creation=True)
+    study = create_study(vehicle_model, db_name)
 
     if is_training:
 
@@ -226,7 +226,7 @@ def run_hyperparameter_optimization_in_parallel(
     inference_config, vehicle_model, db_name
 ):
     # Create the tables before the child processes are created.
-    create_study(vehicle_model, db_name, skip_table_creation=False)
+    create_study(vehicle_model, db_name)
     n_processes = get_parallel_process_count(inference_config)
     processes = []
     logging.info(f"Running optimization in {n_processes} processes")
