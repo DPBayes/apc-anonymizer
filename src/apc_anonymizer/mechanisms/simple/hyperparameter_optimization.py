@@ -16,20 +16,19 @@ import sqlalchemy
 from apc_anonymizer.mechanisms.simple import database, inference, initial
 
 
-def get_category_bounds(vehicle_model):
-    minimum_counts = list(vehicle_model["minimumCounts"].values())
-    return list(
-        zip(
-            minimum_counts,
-            list(map(lambda x: x - 1, minimum_counts[1:]))
-            + [vehicle_model["maximumCount"]],
-            strict=True,
-        )
+def get_min_and_max_index_of_ones(column):
+    return np.flatnonzero(column)[np.array([0, -1])]
+
+
+def get_category_bounds(categories):
+    min_and_max_idx_array = np.apply_along_axis(
+        get_min_and_max_index_of_ones, 0, categories
     )
+    return list(map(tuple, min_and_max_idx_array.transpose()))
 
 
-def calculate_distance_matrix(vehicle_model, categories):
-    category_bounds = get_category_bounds(vehicle_model)
+def calculate_distance_matrix(categories):
+    category_bounds = get_category_bounds(categories)
     distance_matrix = np.zeros(categories.shape)
     for i in range(categories.shape[0]):
         for j in range(categories.shape[1]):
@@ -80,7 +79,7 @@ def run_inference(
 ):
     categories_df = initial.create_initial_dataframe(vehicle_model)
     categories = categories_df.to_numpy()
-    distance_matrix = calculate_distance_matrix(vehicle_model, categories)
+    distance_matrix = calculate_distance_matrix(categories)
     normalized_distance_matrix = distance_matrix / distance_matrix.max()
 
     # Set DP limits.
