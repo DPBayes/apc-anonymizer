@@ -178,3 +178,21 @@ Usually no one else boards and no one alights the vehicle at the same time.
 Then if the precise count was 5 before the stop and 6 after the stop, the published change in the occupancy status may be connected to the individual's movement.
 
 We should use differential privacy to fudge the transition from one category to the next.
+
+### The privacy mechanism
+
+apc-anonymizer is based on finding a probability table of releasing a vehicle state based on the number of passengers. This probability table is found by optimizing the probability of releasing the correct category **while** 
+satisfying differential privacy (DP) [1]. The loss will therefore comprise of two main parts: a log-likelihood for releasing the correct category $L_1$ (which we want to maximize), and a DP-cost function $L_2$ (which we want to minimize).
+Additionally, the loss discourages the probability of releasing categories that are far from the truth, and we add another penalty $L_3$ for this. The final loss will is given as $L = -c_1L_1 + c_2L_2 + c_3L_3$, where the $c_1, c_2$ and 
+$c_3$ are positive coefficients that weight the importance of each loss. For given $c_i$, the algorithm uses stochastic gradient descent to find the optimal probability table. Additionally to find optimal coefficients
+$c_1, c_2, c_3$, we will use the [Optuna](https://github.com/optuna/optuna) package to optimize these hyperparameters. Furthermore, we will have a hinge loss for the DP penalty which returns $\inf$ whenever the probability table
+breaks the desired DP guarantee (given as parameters epsilon and delta to the algorithm).
+
+After the probability table is learned, it can be used to sample the categories based on the passenger count. Note however, that the proposed algorithm provides desired DP guarantee only for a single release. As the presense/absense of 
+an individual might affect the stream of passenger counts at multiple times, the privacy protection should be ideally also provided for the entire stream and not only for a single release.
+
+In the current version we rely on the pseudorandom number generator (PRNG) of NumPy to draw the samples from the trained probability table. It is worth noting that such PRGN might not be cryptographically secure and hence an attacker
+might be able to predict the produced randomness and break the privacy guarantee [2].
+
+[1] Dwork, C., McSherry, F., Nissim, K., & Smith, A. (2006). Calibrating noise to sensitivity in private data analysis. In Theory of Cryptography: Third Theory of Cryptography Conference, TCC 2006, New York, NY, USA, March 4-7, 2006.
+[2] Simson L. Garfinkel and Philip Leclerc. Randomness concerns when deploying differential privacy. In Proceedings of the 19th Workshop on Privacy in the Electronic Society, WPES’20, page 73–86, New York, NY, USA, 2020. 
