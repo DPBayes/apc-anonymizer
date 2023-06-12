@@ -188,7 +188,7 @@ def run_inference(
                 logging.warning(
                     f"Current configuration violates the DP requirement with "
                     f"epsilon "
-                    f"{epsilon_target + dp_penalty_fn(learned_logits)}, when "
+                    f"{epsilon_target + dp_penalty_fn(final_log_ps)}, when "
                     f"the target epsilon was set to {epsilon_target}"
                 )
 
@@ -196,7 +196,7 @@ def run_inference(
             if dp_penalty_fn(final_log_ps) > 0.0:
                 logging.warning(
                     f"Current configuration violates the DP requirement with "
-                    f"delta {delta_target + dp_penalty_fn(learned_logits)}, "
+                    f"delta {delta_target + dp_penalty_fn(final_log_ps)}, "
                     f"when the target delta was set to {delta_target}"
                 )
 
