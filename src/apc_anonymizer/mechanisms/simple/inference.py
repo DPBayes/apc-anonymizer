@@ -64,14 +64,13 @@ def l2_penalty(logits):
     return jnp.linalg.norm(logits)
 
 
-def pure_dp_penalty(logits, eps):
-    log_probs = log_softmax(logits, axis=1)
+def pure_dp_penalty(log_probs, eps):
     ll_ratio = jnp.abs(log_probs[:-1] - log_probs[1:])
     return jax.nn.relu(ll_ratio - (eps - 1e-5)).max()
 
 
-def adp_penalty(logits, eps, delta_target):
-    probs = jnp.exp(log_softmax(logits, axis=1))
+def adp_penalty(log_probs, eps, delta_target):
+    probs = jnp.exp(log_probs)
     delta_add = jnp.max(
         jnp.sum(
             jnp.clip(

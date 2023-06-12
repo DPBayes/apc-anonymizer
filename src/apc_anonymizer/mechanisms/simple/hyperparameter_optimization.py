@@ -116,8 +116,9 @@ def run_inference(
 
             # Replace the penalties in the task.
             def total_penalty(qs):
+                log_probs = inference.log_softmax(qs, axis=1)
                 return dp_weight * dp_penalty_fn(
-                    qs
+                    log_probs
                 ) + dist_weight * inference.distance_penalty(
                     qs, normalized_distance_matrix
                 )
@@ -132,10 +133,12 @@ def run_inference(
                 optimizer=numpyro.optim.Adam(1e-3),
             )
 
+            learned_log_probs = inference.log_softmax(learned_logits, axis=1)
             # Evaluate the DP guarantee.
             # can be either in terms of epsilon or delta, but does not really
             # matter
-            dp_excess = dp_penalty_fn(learned_logits)
+            #dp_excess = dp_penalty_fn(learned_logits)
+            dp_excess = dp_penalty_fn(learned_log_probs)
             dp_loss = 0.0
             if dp_excess > 0.0:
                 dp_loss = np.inf
@@ -157,8 +160,9 @@ def run_inference(
         dist_weight = optimal_hyperparameters["dist. weight"]
 
         def total_penalty(qs):
+            log_probs = inference.log_softmax(qs, axis=1)
             return dp_weight * dp_penalty_fn(
-                qs
+                log_probs
             ) + dist_weight * inference.distance_penalty(
                 qs, normalized_distance_matrix
             )
@@ -176,9 +180,11 @@ def run_inference(
         ## Empirical check for DPness
 
         final_ps = inference.softmax(learned_logits)
-        np.log(final_ps)
+        final_ps = normalize_probabilities(final_ps)
+        final_log_ps = np.log(final_ps)
+
         if delta_target == 0:
-            if dp_penalty_fn(learned_logits) > 0.0:
+            if dp_penalty_fn(final_log_ps) > 0.0:
                 logging.warning(
                     f"Current configuration violates the DP requirement with "
                     f"epsilon "
@@ -187,7 +193,7 @@ def run_inference(
                 )
 
         if delta_target > 0:
-            if dp_penalty_fn(learned_logits) > 0.0:
+            if dp_penalty_fn(final_log_ps) > 0.0:
                 logging.warning(
                     f"Current configuration violates the DP requirement with "
                     f"delta {delta_target + dp_penalty_fn(learned_logits)}, "
@@ -200,7 +206,6 @@ def run_inference(
                 "Writing it anyway."
             )
 
-        final_ps = normalize_probabilities(final_ps)
 
         ## store the learned probability table into a csv
 
