@@ -185,7 +185,7 @@ def run_inference(
 
         if delta_target == 0:
             if dp_penalty_fn(final_log_ps) > 0.0:
-                logging.warning(
+                raise RuntimeError(
                     f"Current configuration violates the DP requirement with "
                     f"epsilon "
                     f"{epsilon_target + dp_penalty_fn(final_log_ps)}, when "
@@ -194,16 +194,16 @@ def run_inference(
 
         if delta_target > 0:
             if dp_penalty_fn(final_log_ps) > 0.0:
-                logging.warning(
+                raise RuntimeError(
                     f"Current configuration violates the DP requirement with "
                     f"delta {delta_target + dp_penalty_fn(final_log_ps)}, "
                     f"when the target delta was set to {delta_target}"
                 )
 
         if np.any(final_ps < 0):
-            logging.warning(
-                "The final probabilities matrix contains negative values. "
-                "Writing it anyway."
+            raise RuntimeError(
+                f"The final probabilities matrix contains negative values: "
+                f"{final_ps}"
             )
 
         # Store the learned probability table into a CSV file.
