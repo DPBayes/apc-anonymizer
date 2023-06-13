@@ -191,8 +191,8 @@ breaks the desired DP guarantee (given as parameters epsilon and delta to the al
 After the probability table is learned, it can be used to sample the categories based on the passenger count. Note however, that the proposed algorithm provides desired DP guarantee only for a single release. As the presense/absense of 
 an individual might affect the stream of passenger counts at multiple times, the privacy protection should be ideally also provided for the entire stream and not only for a single release.
 
-In the current version we rely on the pseudorandom number generator (PRNG) of NumPy to draw the samples from the trained probability table. It is worth noting that such PRGN might not be cryptographically secure and hence an attacker
-might be able to predict the produced randomness and break the privacy guarantee [2].
+We draw the samples in a cryptographically secure manner.
+Otherwise an attacker might be able to predict the produced randomness and break the privacy guarantee [2].
 
 [1] Dwork, C., McSherry, F., Nissim, K., & Smith, A. (2006). Calibrating noise to sensitivity in private data analysis. In Theory of Cryptography: Third Theory of Cryptography Conference, TCC 2006, New York, NY, USA, March 4-7, 2006.
 [2] Simson L. Garfinkel and Philip Leclerc. Randomness concerns when deploying differential privacy. In Proceedings of the 19th Workshop on Privacy in the Electronic Society, WPES’20, page 73–86, New York, NY, USA, 2020. 
