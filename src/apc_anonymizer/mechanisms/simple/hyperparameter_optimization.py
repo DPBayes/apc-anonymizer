@@ -137,7 +137,7 @@ def run_inference(
             # Evaluate the DP guarantee.
             # can be either in terms of epsilon or delta, but does not really
             # matter
-            #dp_excess = dp_penalty_fn(learned_logits)
+            # dp_excess = dp_penalty_fn(learned_logits)
             dp_excess = dp_penalty_fn(learned_log_probs)
             dp_loss = 0.0
             if dp_excess > 0.0:
@@ -205,7 +205,6 @@ def run_inference(
                 "The final probabilities matrix contains negative values. "
                 "Writing it anyway."
             )
-
 
         ## store the learned probability table into a csv
 
