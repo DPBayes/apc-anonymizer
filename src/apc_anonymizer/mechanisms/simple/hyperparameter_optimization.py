@@ -62,7 +62,7 @@ def normalize_probabilities(probs, diff_eps=1e-10):
     normalized = probs
     row_sums = np.apply_along_axis(math.fsum, axis=1, arr=probs)
     if np.any(np.abs(row_sums - 1.0) >= diff_eps):
-        print(
+        logging.debug(
             f"The final probabilities matrix is not normalized. The row sums "
             f"are {row_sums}. Normalizing the final probabilities now."
         )
