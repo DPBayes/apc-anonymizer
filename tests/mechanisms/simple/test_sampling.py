@@ -93,3 +93,9 @@ def test_sampling_realistic_profile():
     assert sample(16) == "MANY_SEATS_AVAILABLE"
     for _i in range(1000):
         assert sample(4) in ["EMPTY", "MANY_SEATS_AVAILABLE"]
+    for _i in range(1000):
+        assert sample(31) in [
+            "MANY_SEATS_AVAILABLE",
+            "FEW_SEATS_AVAILABLE",
+            "STANDING_ROOM_ONLY",
+        ]
