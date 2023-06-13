@@ -1,4 +1,4 @@
-import math
+import secrets
 
 import numpy as np
 import pandas as pd
@@ -22,12 +22,14 @@ def create_sampler(csv_path_or_buffer):
 
     # Let's normalize the probabilities. They should already be normalized but
     # due to the floating-point serialization into CSV and deserialization out
-    # of CSV there might be a small difference. np.random.choice is really
+    # of CSV there might be a small difference.
     # picky about normalization.
     probabilities = probabilities_df.values
-    row_sums = np.apply_along_axis(math.fsum, axis=1, arr=probabilities)
-    normalized = probabilities * (1.0 / row_sums)[:, np.newaxis]
+    cdf = np.cumsum(probabilities, axis=1)
+    normalized_cdf = cdf * (1.0 / cdf[:, -1])[:, np.newaxis]
     categories = probabilities_df.columns
+    # Generate cryptographically strong random numbers.
+    generator = secrets.SystemRandom()
 
     def sample(passenger_count):
         """Sample from the probabilities to produce an occupancy status.
@@ -38,9 +40,8 @@ def create_sampler(csv_path_or_buffer):
         and publish the result.
         """
         clamped_count = clamp(passenger_count, min_count, max_count)
-        probabilities_given_passenger_count = normalized[clamped_count, :]
-        return np.random.choice(
-            categories, p=probabilities_given_passenger_count
-        )
+        cdf_given_passenger_count = normalized_cdf[clamped_count, :]
+        p = generator.random()
+        return categories[np.searchsorted(cdf_given_passenger_count, p)]
 
     return sample
