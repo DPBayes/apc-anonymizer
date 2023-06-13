@@ -169,7 +169,7 @@ def run_inference(
 
         task = inference.LearnWithSGD(categories, total_penalty)
 
-        # learn the parameters using SGD
+        # Learn the parameters using SGD.
         learned_logits = task.train(
             n_iters,
             init_seed=0,
@@ -177,7 +177,7 @@ def run_inference(
             optimizer=numpyro.optim.Adam(1e-3),
         )
 
-        ## Empirical check for DPness
+        # Empirical check for DPness.
 
         final_ps = inference.softmax(learned_logits)
         final_ps = normalize_probabilities(final_ps)
@@ -206,7 +206,7 @@ def run_inference(
                 "Writing it anyway."
             )
 
-        ## store the learned probability table into a csv
+        # Store the learned probability table into a CSV file.
 
         directory = pathlib.Path(output_directory)
         prob_df = pd.DataFrame(final_ps, columns=categories_df.columns)
