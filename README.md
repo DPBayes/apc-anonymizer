@@ -197,5 +197,5 @@ As the presense/absense of an individual might affect the stream of passenger co
 We draw the samples in a cryptographically secure manner.
 Otherwise an attacker might be able to predict the produced randomness and break the privacy guarantee [2].
 
-[1] Dwork, C., McSherry, F., Nissim, K., & Smith, A. (2006). Calibrating noise to sensitivity in private data analysis. In Theory of Cryptography: Third Theory of Cryptography Conference, TCC 2006, New York, NY, USA, March 4-7, 2006.
+[1] Dwork, C., McSherry, F., Nissim, K., & Smith, A. (2006). Calibrating noise to sensitivity in private data analysis. In Theory of Cryptography: Third Theory of Cryptography Conference, TCC 2006, New York, NY, USA, March 4-7, 2006.  
 [2] Simson L. Garfinkel and Philip Leclerc. Randomness concerns when deploying differential privacy. In Proceedings of the 19th Workshop on Privacy in the Electronic Society, WPES’20, page 73–86, New York, NY, USA, 2020.
