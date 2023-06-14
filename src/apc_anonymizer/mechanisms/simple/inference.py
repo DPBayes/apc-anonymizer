@@ -170,10 +170,7 @@ class LearnWithSGD:
                     0, epoch_len, update_epoch, (optim_state, 0.0)
                 )
                 iterator.set_description(f"Loss {loss_at_iter.item():.2f}")
-                if jnp.isnan(loss_at_iter):
-                    # FIXME: is this an error?
-                    logging.info("Nans!!!!!")
-                    break
+                assert jnp.isnan(loss_at_iter) == False, f"Loss after epoch {_epoch_nr} was evaluated as NaN"
                 optim_state = optim_state_new
             if silent:
                 logging.info(f"Loss achieved with SGD: {loss_at_iter}")
