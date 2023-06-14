@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://FIXME.FIXME/schema/bundle/1-0-0/inference-configuration-schema.json",
+  "type": "object",
+  "title": "Configuration for automatic passenger counting differential privacy inference",
+  "description": "The configuration file for the inference of differential privacy parameters for automatic passenger counting results.",
+  "properties": {
+    "configurationVersion": {
+      "description": "The SchemaVer version number of the JSON schema that this configuration file follows. It must match a published SchemaVer version number from the '$id' key of the corresponding JSON schema. A valid value is for example \"1-0-0\".",
+      "type": "string",
+      "pattern": "^[0-9]+-[0-9]+-[0-9]+$",
+      "default": "1-0-0"
+    },
+    "outputDirectory": {
+      "description": "The path to the directory where the inference output should be stored as CSV files. The directory will be created if it does not already exist.",
+      "type": "string",
+      "default": "/output"
+    },
+    "vehicleModels": {
+      "description": "A sequence of vehicle models given as input for the inference. At least one vehicle model must be given.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "properties": {
+          "outputFilename": {
+            "description": "The filename of the inference output for this vehicle model. The file will be a CSV file as specified by IETF RFC 4180. The filename must be unique among the vehicle models in this configuration file. The full output path for each CSV file will be outputDirectory + \"/\" + outputFilename. If the file already exists, it will be overwritten.",
+            "type": "string",
+            "minLength": 1
+          },
+          "minimumCounts": {
+            "description": "A mapping from the ordinal category names depicting passenger occupancy to the minimum passenger counts matching those categories. The category names might be e.g. GTFS Realtime OccupancyStatus values. The output CSV file will use the category names as column names. The column names will be ordered in ascending order of the minimum counts. The minimum counts will be used as necessary guidelines for the inference but they will not be exactly followed. Each category name must be unique. Each minimum count must be a non-negative and unique integer. One category must depict the empty vehicle and its value must be 0. There must be at least two categories.",
+            "type": "object",
+            "minProperties": 2,
+            "patternProperties": {
+              "^.+$": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "maximumCount": {
+            "description": "The maximum passenger count for this vehicle model. This may be an estimate and may be surpassed in practice. The value must be at least as high as the maximum integer value in minimumCounts.",
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["outputFilename", "minimumCounts", "maximumCount"],
+        "additionalProperties": false
+      }
+    },
+    "inference": {
+      "description": "The inference mechanism and its options to be used.",
+      "type": "object",
+      "oneOf": [
+        {
+          "description": "The simple mechanism.",
+          "type": "object",
+          "properties": {
+            "mechanism": {
+              "description": "The name of the mechanism.",
+              "type": "string",
+              "const": "simple",
+              "default": "simple"
+            },
+            "options": {
+              "type": "object",
+              "properties": {
+                "epsilon": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. epsilon is the ε in (ε, δ)-differential privacy.",
+                  "type": "number",
+                  "exclusiveMinimum": 0.0,
+                  "default": 1.0
+                },
+                "delta": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. delta is the δ in (ε, δ)-differential privacy.",
+                  "type": "number",
+                  "minimum": 0.0,
+                  "default": 1.0e-5
+                },
+                "numberOfIterationsPerHyperparameterTrial": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. numberOfIterationsPerHyperparameterTrial sets how many iterations of stochastic gradient descent (SGD) are run for each hyperparameter trial. FIXME: check",
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 10000000
+                },
+                "numberOfHyperparameterTrialsPerProcess": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. numberOfHyperparameterTrialsPerProcess sets how many hyperparameter trials are run for each Python process.",
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 50
+                },
+                "numberOfProcesses": {
+                  "description": "The number of Python processes to run in parallel to converge on the hyperparameter values. Parallelization shortens the computation wall clock time.",
+                  "type": ["integer", "string"],
+                  "minimum": 1,
+                  "const": "one-per-core",
+                  "default": "one-per-core"
+                }
+              },
+              "default": {},
+              "additionalProperties": false
+            }
+          },
+          "required": ["mechanism"],
+          "additionalProperties": false
+        }
+      ],
+      "default": {},
+      "$comment": "Adding 'additionalProperties: false' here does not seem to work, probably because of the 'oneOf'."
+    }
+  },
+  "required": ["vehicleModels"],
+  "additionalProperties": false
+}
