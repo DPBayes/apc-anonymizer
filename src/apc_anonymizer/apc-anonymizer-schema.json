@@ -96,7 +96,6 @@
                   "description": "The number of Python processes to run in parallel to converge on the hyperparameter values. Parallelization shortens the computation wall clock time.",
                   "type": ["integer", "string"],
                   "minimum": 1,
-                  "const": "one-per-core",
                   "default": "one-per-core"
                 }
               },
