@@ -214,7 +214,7 @@ def run_inference(
             prob_df.to_csv(
                 directory / output_filename,
                 index_label="passenger_count",
-                float_format="%.16g",
+                float_format="%.17g",
             )
 
 
