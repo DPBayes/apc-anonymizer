@@ -55,21 +55,23 @@ def test_realistic_initial_dataframe():
     expected_initial_df = pd.DataFrame(
         data={
             "EMPTY": ([1.0] * (6 - 0)) + ([0.0] * (126 - 6 + 1)),
-            "MANY_SEATS_AVAILABLE": ([0.0] * 6)
-            + ([1.0] * (36 - 6))
-            + ([0.0] * (126 - 36 + 1)),
-            "FEW_SEATS_AVAILABLE": ([0.0] * 36)
-            + ([1.0] * (46 - 36))
-            + ([0.0] * (126 - 46 + 1)),
-            "STANDING_ROOM_ONLY": ([0.0] * 46)
-            + ([1.0] * (84 - 46))
-            + ([0.0] * (126 - 84 + 1)),
-            "CRUSHED_STANDING_ROOM_ONLY": ([0.0] * 84)
-            + ([1.0] * (110 - 84))
-            + ([0.0] * (126 - 110 + 1)),
-            "FULL": ([0.0] * 110)
-            + ([1.0] * (126 - 110))
-            + ([1.0] * (126 - 126 + 1)),
+            "MANY_SEATS_AVAILABLE": (
+                ([0.0] * 6) + ([1.0] * (36 - 6)) + ([0.0] * (126 - 36 + 1))
+            ),
+            "FEW_SEATS_AVAILABLE": (
+                ([0.0] * 36) + ([1.0] * (46 - 36)) + ([0.0] * (126 - 46 + 1))
+            ),
+            "STANDING_ROOM_ONLY": (
+                ([0.0] * 46) + ([1.0] * (84 - 46)) + ([0.0] * (126 - 84 + 1))
+            ),
+            "CRUSHED_STANDING_ROOM_ONLY": (
+                ([0.0] * 84) + ([1.0] * (110 - 84)) + ([0.0] * (126 - 110 + 1))
+            ),
+            "FULL": (
+                ([0.0] * 110)
+                + ([1.0] * (126 - 110))
+                + ([1.0] * (126 - 126 + 1))
+            ),
         }
     )
     initial_df = initial.create_initial_dataframe(vehicleModel)

@@ -61,7 +61,7 @@ def validate_output_filenames_unique(config):
     duplicate_filenames = list_duplicates(output_filenames)
     if duplicate_filenames:
         raise ValueError(
-            f"Every outputFilename must be unique. These filenames are "
+            "Every outputFilename must be unique. These filenames are "
             f"duplicated: {str(duplicate_filenames)}."
         )
 
@@ -73,7 +73,7 @@ def validate_minimum_counts_unique(config):
         )
         if duplicate_minimum_counts:
             raise ValueError(
-                f"minimumCounts must have unique values. These counts repeat "
+                "minimumCounts must have unique values. These counts repeat "
                 f"for outputFilename {str(vm['outputFilename'])}: "
                 f"{str(duplicate_minimum_counts)}."
             )
@@ -83,7 +83,7 @@ def validate_single_minimum_count_zero(config):
     for vm in config["vehicleModels"]:
         if 0 not in vm["minimumCounts"].values():
             raise ValueError(
-                f"One value in minimumCounts must be zero. Zero value is "
+                "One value in minimumCounts must be zero. Zero value is "
                 f"missing for outputFilename {str(vm['outputFilename'])}."
             )
 
@@ -92,8 +92,8 @@ def validate_maximum_count_highest(config):
     for vm in config["vehicleModels"]:
         if vm["maximumCount"] < max(vm["minimumCounts"].values()):
             raise ValueError(
-                f"maximumCount must be at least as high as the maximum "
-                f"integer value in minimumCounts. maximumCount is too low for "
+                "maximumCount must be at least as high as the maximum "
+                "integer value in minimumCounts. maximumCount is too low for "
                 f"outputFilename {str(vm['outputFilename'])}."
             )
 

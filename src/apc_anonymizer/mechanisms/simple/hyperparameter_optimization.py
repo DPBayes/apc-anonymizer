@@ -63,7 +63,7 @@ def normalize_probabilities(probs, diff_eps=1e-10):
     row_sums = np.apply_along_axis(math.fsum, axis=1, arr=probs)
     if np.any(np.abs(row_sums - 1.0) >= diff_eps):
         logging.debug(
-            f"The final probabilities matrix is not normalized. The row sums "
+            "The final probabilities matrix is not normalized. The row sums "
             f"are {row_sums}. Normalizing the final probabilities now."
         )
         normalized = probs * (1.0 / row_sums)[:, np.newaxis]
@@ -186,8 +186,8 @@ def run_inference(
         if delta_target == 0:
             if dp_penalty_fn(final_log_ps) > 0.0:
                 raise RuntimeError(
-                    f"Current configuration violates the DP requirement with "
-                    f"epsilon "
+                    "Current configuration violates the DP requirement with "
+                    "epsilon "
                     f"{epsilon_target + dp_penalty_fn(final_log_ps)}, when "
                     f"the target epsilon was set to {epsilon_target}"
                 )
@@ -195,14 +195,14 @@ def run_inference(
         if delta_target > 0:
             if dp_penalty_fn(final_log_ps) > 0.0:
                 raise RuntimeError(
-                    f"Current configuration violates the DP requirement with "
+                    "Current configuration violates the DP requirement with "
                     f"delta {delta_target + dp_penalty_fn(final_log_ps)}, "
                     f"when the target delta was set to {delta_target}"
                 )
 
         if np.any(final_ps < 0):
             raise RuntimeError(
-                f"The final probabilities matrix contains negative values: "
+                "The final probabilities matrix contains negative values: "
                 f"{final_ps}"
             )
 
@@ -245,7 +245,7 @@ def run_hyperparameter_optimization_in_parallel(
         if p.exitcode != 0:
             raise RuntimeError(
                 f"Hyperparameter optimization process with PID {p.pid} exited "
-                f"abnormally."
+                "abnormally."
             )
 
 
@@ -270,7 +270,7 @@ def run_inference_for_all_vehicle_models(config):
     database.prepare_database(db_name)
     for vehicle_model in config["vehicleModels"]:
         logging.info(
-            f"Run inference for vehicle model "
+            "Run inference for vehicle model "
             f"{vehicle_model['outputFilenames']}"
         )
         run_inference_in_parallel(
