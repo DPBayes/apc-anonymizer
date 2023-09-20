@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "apc-anonymizer"
 version = "0.1.0"
-description = ""
+description = "Anonymize automatic passenger counting (APC) results for public transit using differential privacy"
 authors = ["haphut <haphut@mistmap.com>"]
 readme = "README.md"
 packages = [{include = "apc_anonymizer", from = "src"}]
