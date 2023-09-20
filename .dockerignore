@@ -8,6 +8,7 @@
 !/README.md
 !/src
 !/tests
+!/tool-dependencies/requirements.txt
 
 # Except do not allow these.
 # Byte-compiled / optimized / DLL files
