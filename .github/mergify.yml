@@ -1,0 +1,17 @@
+---
+queue_rules:
+  - name: dependabot
+    conditions:
+      - check-success=Build, check, test, push
+      - check-success=CodeQL
+    batch_size: 10
+    batch_max_wait_time: 5min
+    queue_branch_merge_method: fast-forward
+
+pull_request_rules:
+  - name: Merge Dependabot PRs automatically within repository constraints
+    conditions:
+      - author=dependabot[bot]
+    actions:
+      queue:
+        name: dependabot

@@ -1,0 +1,74 @@
+---
+name: "CI/CD: Continuous integration and continuous deployment"
+
+"on":
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+
+env:
+  IMAGE_NAME: "tvvlmj/${{ github.event.repository.name }}"
+  TEST_STAGE: tester
+  PRODUCTION_STAGE: production
+
+jobs:
+  build-check-test-push:
+    name: Build, check, test, push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node
+        uses: actions/setup-python@v4
+        with:
+          # We use pip and poetry. poetry has a larger list of dependencies.
+          cache: "poetry"
+      - name: Install tool dependencies
+        run: pip install --no-cache-dir --requirement ./tool-dependencies/requirements.txt
+      - name: Install the project
+        run: poetry install
+      - name: Check and test outside Docker
+        run: poe check
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=edge,branch=main
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=sha,format=long
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and export to Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          target: "${{ env.TEST_STAGE }}"
+          tags: "${{ env.IMAGE_NAME }}:${{ env.TEST_STAGE }}"
+      # This step runs the tests in an environment that closely resembles the
+      # production Docker image.
+      - name: Check and test inside Docker
+        run: |
+          docker run --rm "${{ env.IMAGE_NAME }}:${{ env.TEST_STAGE }}"
+      - name: Login to Docker Hub
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          target: "${{ env.PRODUCTION_STAGE }}"
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
