@@ -81,16 +81,22 @@
                   "default": 1.0e-5
                 },
                 "numberOfIterationsPerHyperparameterTrial": {
-                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. numberOfIterationsPerHyperparameterTrial sets how many iterations of stochastic gradient descent (SGD) are run for each hyperparameter trial. FIXME: check",
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. numberOfIterationsPerHyperparameterTrial sets how many iterations of stochastic gradient descent (SGD) are run for each hyperparameter trial.",
                   "type": "integer",
                   "minimum": 1,
                   "default": 10000000
                 },
-                "numberOfHyperparameterTrialsPerProcess": {
-                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. numberOfHyperparameterTrialsPerProcess sets how many hyperparameter trials are run for each Python process.",
+                "minimumNumberOfHyperparameterTrialsPerProcess": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. minimumNumberOfHyperparameterTrialsPerProcess sets at least how many hyperparameter trials are run for each Python process.",
                   "type": "integer",
                   "minimum": 1,
-                  "default": 50
+                  "default": 40
+                },
+                "minimumNumberOfHyperparameterTrials": {
+                  "description": "DO NOT CHANGE THIS VALUE IF YOU DO NOT KNOW WHAT YOU ARE DOING. minimumNumberOfHyperparameterTrials sets at least how many hyperparameter trials are run in total.",
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 600
                 },
                 "numberOfProcesses": {
                   "description": "The number of Python processes to run in parallel to converge on the hyperparameter values. Parallelization shortens the computation wall clock time.",

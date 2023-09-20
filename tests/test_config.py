@@ -74,7 +74,7 @@ def test_realistic_configuration():
     inference:
       mechanism: "simple"
       options:
-        numberOfHyperparameterTrialsPerProcess: 20
+        minimumNumberOfHyperparameterTrialsPerProcess: 50
         numberOfProcesses: "one-per-core"
     """
     config = yaml.safe_load(config_string)
@@ -112,7 +112,8 @@ def test_defaults():
                 "epsilon": 1.0,
                 "delta": 1e-5,
                 "numberOfIterationsPerHyperparameterTrial": int(1e7),
-                "numberOfHyperparameterTrialsPerProcess": 50,
+                "minimumNumberOfHyperparameterTrialsPerProcess": 40,
+                "minimumNumberOfHyperparameterTrials": 600,
                 "numberOfProcesses": "one-per-core",
             },
         },

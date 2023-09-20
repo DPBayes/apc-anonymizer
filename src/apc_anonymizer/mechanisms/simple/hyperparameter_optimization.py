@@ -225,12 +225,28 @@ def get_parallel_process_count(inference_config):
     return n_processes
 
 
+def add_trials_per_process_to_config(inference_config, n_processes):
+    min_trials_per_process = inference_config["options"][
+        "minimumNumberOfHyperparameterTrialsPerProcess"
+    ]
+    min_trials_in_total = inference_config["options"][
+        "minimumNumberOfHyperparameterTrials"
+    ]
+    n_trials_per_process = max(
+        math.ceil(min_trials_in_total / n_processes), min_trials_per_process
+    )
+    inference_config["options"][
+        "numberOfHyperparameterTrialsPerProcess"
+    ] = n_trials_per_process
+
+
 def run_hyperparameter_optimization_in_parallel(
     inference_config, vehicle_model, db_name
 ):
     # Create the tables before the child processes are created.
     create_study(vehicle_model, db_name)
     n_processes = get_parallel_process_count(inference_config)
+    add_trials_per_process_to_config(inference_config, n_processes)
     processes = []
     try:
         logging.info(f"Running optimization in {n_processes} processes")
