@@ -232,21 +232,24 @@ def run_hyperparameter_optimization_in_parallel(
     create_study(vehicle_model, db_name)
     n_processes = get_parallel_process_count(inference_config)
     processes = []
-    logging.info(f"Running optimization in {n_processes} processes")
-    for _i in range(n_processes):
-        p = multiprocessing.Process(
-            target=run_inference,
-            args=(inference_config, vehicle_model, db_name),
-        )
-        processes.append(p)
-        p.start()
-    [p.join() for p in processes]
-    for p in processes:
-        if p.exitcode != 0:
-            raise RuntimeError(
-                f"Hyperparameter optimization process with PID {p.pid} exited "
-                "abnormally."
+    try:
+        logging.info(f"Running optimization in {n_processes} processes")
+        for _i in range(n_processes):
+            p = multiprocessing.Process(
+                target=run_inference,
+                args=(inference_config, vehicle_model, db_name),
             )
+            processes.append(p)
+            p.start()
+        [p.join() for p in processes]
+        for p in processes:
+            if p.exitcode != 0:
+                raise RuntimeError(
+                    "Hyperparameter optimization process with PID"
+                    f" {p.pid} exited abnormally."
+                )
+    finally:
+        [p.terminate() for p in processes if p.is_alive()]
 
 
 def run_inference_in_parallel(
