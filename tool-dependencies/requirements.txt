@@ -1,0 +1,5 @@
+# This file exists for tools that are used for managing dependencies, running
+# scripts etc. This way Dependabot can update the tools and their versions do
+# not need to be fixed in Dockerfile.
+poetry==1.6.1
+poethepoet==0.22.1
