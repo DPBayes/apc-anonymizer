@@ -38,6 +38,7 @@ While creating the profiles takes significant computing effort and should be don
    The configuration file must follow the [JSON schema](./src/apc_anonymizer/apc-anonymizer-schema.json) which describes all the configuration options.
 
 1. Create the anonymization profiles in Docker, e.g.:
+
    FIXME: Change Docker image tag.
 
    ```sh
@@ -47,7 +48,7 @@ While creating the profiles takes significant computing effort and should be don
      --volume="./configuration.yaml:/config/configuration.yaml:ro" \
      --volume="./output:/output" \
      --rm \
-     "probic/apc-anonymizer"
+     "ORGANIZATION-HERE/apc-anonymizer"
    ```
 
 1. Use the CSV files describing the anonymization profiles in directory `./output` to anonymize APC counts.
@@ -160,6 +161,7 @@ You can translate it to the language you need.
 Run `./check.sh` to check the code quality.
 
 FIXME: fix organization
+
 Run `docker build --target=runtime --tag="ORGANIZATION-HERE/apc-anonymizer" .` to build the Docker image.
 
 ## Used by
