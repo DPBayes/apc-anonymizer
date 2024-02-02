@@ -1,7 +1,7 @@
 # Oh dear, poetry has not figured out a unified solution to Dockerfiles:
 # https://github.com/orgs/python-poetry/discussions/1879
 
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get -y --no-install-recommends install \
@@ -35,7 +35,7 @@ CMD ["poe", "check"]
 
 
 
-FROM python:3.11-slim AS production
+FROM python:3.12-slim AS production
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get -y --no-install-recommends install \
