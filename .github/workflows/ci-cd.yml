@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Node
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           # We use pip and poetry. poetry has a larger list of dependencies.
           cache: "poetry"
